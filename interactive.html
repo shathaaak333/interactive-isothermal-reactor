@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SMR Simulator — Corrected | 30 bar</title>
+<script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--s1:#161b22;--border:#30363d;
+  --amber:#f0a500;--cyan:#58d1ea;--green:#3fb950;
+  --red:#f85149;--blue:#388bfd;--purple:#bc8cff;
+  --text:#e6edf3;--muted:#8b949e;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);
+          color:var(--text);font-family:var(--sans);font-size:13px}
+.app{display:grid;grid-template-columns:308px 1fr;
+     grid-template-rows:50px 1fr;height:100vh;overflow:hidden}
+/* Topbar */
+.topbar{grid-column:1/-1;background:var(--s1);border-bottom:1px solid var(--border);
+        display:flex;align-items:center;padding:0 18px;gap:12px}
+.logo{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--amber);letter-spacing:2px}
+.pipe{width:1px;height:18px;background:var(--border)}
+.tag{font-size:11px;color:var(--muted)}
+.fix-badge{padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;
+           font-family:var(--mono);background:rgba(63,185,80,.15);
+           color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.mode-wrap{margin-left:auto;display:flex;align-items:center;gap:8px}
+.mode-lbl{font-size:11px;color:var(--muted)}
+.mtog-row{display:flex;background:var(--bg);border:1px solid var(--border);
+          border-radius:5px;overflow:hidden}
+.mtog{padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;
+      border:none;background:transparent;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.5px;transition:all .15s}
+.mtog.on{background:var(--cyan);color:#000}
+/* Sidebar */
+.sidebar{background:var(--s1);border-right:1px solid var(--border);
+         overflow-y:auto;padding:14px}
+.sec{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--amber);
+     text-transform:uppercase;margin:16px 0 8px;padding-bottom:5px;
+     border-bottom:1px solid var(--border)}
+.sec:first-child{margin-top:0}
+.ctrl{margin-bottom:11px}
+.clbl{display:flex;justify-content:space-between;align-items:baseline;
+      margin-bottom:4px;font-size:11px;color:var(--muted)}
+.cval{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--amber)}
+input[type=range]{width:100%;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--border);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:13px;width:13px;
+  border-radius:50%;background:var(--amber);margin-top:-5px;
+  box-shadow:0 0 5px rgba(240,165,0,.5);transition:transform .1s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.ticks{display:flex;justify-content:space-between;font-size:9px;
+       color:var(--border);margin-top:1px;font-family:var(--mono)}
+input[type=number]{width:100%;padding:7px 9px;background:var(--bg);
+  border:1px solid var(--border);border-radius:4px;color:var(--text);
+  font-family:var(--mono);font-size:12px;outline:none;transition:border .15s}
+input[type=number]:focus{border-color:var(--amber)}
+.hidden{display:none!important}
+.fix-box{background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.2);
+         border-left:3px solid var(--green);border-radius:5px;
+         padding:9px 11px;margin-bottom:10px;font-size:10px;line-height:1.75;color:var(--muted)}
+.fix-box strong{color:var(--green)}
+.fix-box code{font-family:var(--mono);color:var(--cyan);font-size:10px}
+.guide{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--purple);
+       border-radius:5px;padding:9px 11px;margin-bottom:10px;font-size:10px;
+       line-height:1.75;color:var(--muted)}
+.guide strong{color:var(--purple)}
+.guide em{color:var(--amber);font-style:normal}
+.rinfo{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px}
+.ri{display:flex;justify-content:space-between;padding:3px 0;font-size:11px;
+    border-bottom:1px solid var(--border)}
+.ri:last-child{border:none}
+.rk{color:var(--muted)}.rv{font-family:var(--mono);font-weight:600}
+/* Main */
+.main{display:grid;grid-template-rows:auto auto 1fr auto;overflow:hidden;
+      padding:12px;gap:10px;background:var(--bg)}
+/* Goal cards */
+.goal-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gcard{border-radius:8px;padding:12px 14px;border:1px solid;
+       display:flex;align-items:center;gap:12px;position:relative;
+       overflow:hidden;transition:border-color .3s,background .3s}
+.gcard.pass{background:rgba(63,185,80,.07);border-color:rgba(63,185,80,.35)}
+.gcard.fail{background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.35)}
+.gcard.warn{background:rgba(240,165,0,.07);border-color:rgba(240,165,0,.35)}
+.gicon{font-size:22px;line-height:1;flex-shrink:0;width:28px;text-align:center}
+.ginfo{flex:1;min-width:0}
+.gtitle{font-size:9px;letter-spacing:1px;text-transform:uppercase;
+        color:var(--muted);font-family:var(--mono);margin-bottom:3px}
+.gval{font-family:var(--mono);font-size:20px;font-weight:600;
+      line-height:1;transition:color .3s}
+.gval.pass{color:var(--green)}.gval.fail{color:var(--red)}.gval.warn{color:var(--amber)}
+.gsub{font-size:10px;color:var(--muted);margin-top:2px}
+.gbadge{padding:2px 8px;border-radius:3px;font-family:var(--mono);font-size:10px;
+        font-weight:700;margin-left:auto;flex-shrink:0;transition:all .3s}
+.gbadge.pass{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.gbadge.fail{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3)}
+.gbadge.warn{background:rgba(240,165,0,.15);color:var(--amber);border:1px solid rgba(240,165,0,.3)}
+.gbar-wrap{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.04)}
+.gbar{height:100%;border-radius:0 2px 2px 0;transition:width .35s ease}
+.gbar.pass{background:var(--green)}.gbar.fail{background:var(--red)}.gbar.warn{background:var(--amber)}
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:7px;
+     padding:10px 12px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.a::before{background:var(--amber)}.kpi.c::before{background:var(--cyan)}
+.kpi.g::before{background:var(--green)}.kpi.b::before{background:var(--blue)}
+.kpi.r::before{background:var(--red)}
+.klbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;
+      color:var(--muted);margin-bottom:4px;font-family:var(--mono)}
+.knum{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);line-height:1}
+.kunit{font-size:10px;color:var(--muted);margin-top:2px}
+/* Charts */
+.charts{display:grid;grid-template-columns:3fr 2fr;gap:10px;min-height:0;overflow:hidden}
+.cpanel{background:var(--s1);border:1px solid var(--border);border-radius:7px;
+        padding:11px;display:flex;flex-direction:column;min-height:0}
+.ctitle{font-family:var(--mono);font-size:9px;letter-spacing:1px;
+        text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.leg{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.li{font-size:9px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.ld{width:14px;height:2px;border-radius:1px;flex-shrink:0}
+.pbox{flex:1;min-height:0}
+/* Details */
+.drow-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dc{background:var(--s1);border:1px solid var(--border);border-radius:7px;padding:11px 12px}
+.dtit{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+      font-family:var(--mono);border-bottom:1px solid var(--border);
+      padding-bottom:5px;margin-bottom:6px}
+.dr{display:flex;justify-content:space-between;padding:2px 0;font-size:11px}
+.dk{color:var(--muted)}.dv{font-family:var(--mono);font-weight:600}
+.dv.a{color:var(--amber)}.dv.c{color:var(--cyan)}.dv.g{color:var(--green)}
+.dv.r{color:var(--red)}.dv.b{color:var(--blue)}.dv.p{color:var(--purple)}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;
+       border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:600}
+.ok{background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.25)}
+.no{background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.25)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <span class="logo">SMR·SIM</span>
+  <div class="pipe"></div>
+  <span class="tag">30 bar &nbsp;·&nbsp; Multi-Tubular &nbsp;·&nbsp; Xu &amp; Froment 1989</span>
+  <div class="pipe"></div>
+  <span class="fix-badge">✓ CORRECTED KINETICS</span>
+  <div class="mode-wrap">
+    <span class="mode-lbl">Feed:</span>
+    <div class="mtog-row">
+      <button class="mtog on" id="btn-fx"  onclick="setMode('fixed')">Fixed</button>
+      <button class="mtog"    id="btn-tg"  onclick="setMode('target')">H₂ Target</button>
+    </div>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="sec">Process Conditions</div>
+  <div class="ctrl">
+    <div class="clbl">Inlet Temp T<sub>in</sub><span class="cval" id="lbl-tin">950 °C</span></div>
+    <input type="range" id="sl-tin" min="600" max="1100" step="5" value="950" oninput="go()">
+    <div class="ticks"><span>600</span><span>850</span><span>1100</span></div>
+  </div>
+  <div class="ctrl">
+    <div class="clbl">Heating Medium T<sub>ext</sub><span class="cval" id="lbl-tex">1100 °C</span></div>
+    <input type="range" id="sl-tex" min="600" max="1300" step="5" value="1100" oninput="go()">
+    <div class="ticks"><span>600</span><span>950</span><span>1300</span></div>
+  </div>
+  <div class="ctrl">
+    <div class="clbl">Heat Transfer Ua<span class="cval" id="lbl-ua">2000 W/(kg·K)</span></div>
+    <input type="range" id="sl-ua" min="0" max="5000" step="50" value="2000" oninput="go()">
+    <div class="ticks"><span>0</span><span>2500</span><span>5000</span></div>
+  </div>
+  <div class="ctrl">
+    <div class="clbl">Catalyst Weight<span class="cval" id="lbl-wc">200 kg</span></div>
+    <input type="range" id="sl-wc" min="10" max="1000" step="5" value="200" oninput="go()">
+    <div class="ticks"><span>10</span><span>500</span><span>1000</span></div>
+  </div>
+  <div class="ctrl">
+    <div class="clbl">Design Temp Limit<span class="cval" id="lbl-dl">1100 °C</span></div>
+    <input type="range" id="sl-dl" min="700" max="1400" step="10" value="1100" oninput="go()">
+    <div class="ticks"><span>700</span><span>1050</span><span>1400</span></div>
+  </div>
+
+  <div class="sec">Feed Composition</div>
+  <div class="ctrl"><div class="clbl">Pressure (bar)</div>
+    <input type="number" id="n-p" min="1" max="60" step="0.5" value="30" oninput="go()"></div>
+  <div class="ctrl"><div class="clbl">Steam / Carbon Ratio</div>
+    <input type="number" id="n-sc" min="1" max="10" step="0.01" value="3.12" oninput="go()"></div>
+  <div class="ctrl"><div class="clbl">Inert / CH₄ Ratio</div>
+    <input type="number" id="n-ic" min="0" max="20" step="0.01" value="9.213" oninput="go()"></div>
+  <div id="sec-fx">
+    <div class="ctrl"><div class="clbl">CH₄ Feed (mol/s)</div>
+      <input type="number" id="n-ch4" min="1" max="100000" step="10" value="500" oninput="go()"></div>
+  </div>
+  <div id="sec-tg" class="hidden">
+    <div class="ctrl"><div class="clbl">H₂ Target (kmol/h)</div>
+      <input type="number" id="n-h2" min="100" max="1000000" step="10" value="8929" oninput="go()"></div>
+  </div>
+
+  <div class="sec">Corrections Applied</div>
+  <div class="fix-box">
+    <strong>Fix 1 — Unit conversion</strong><br>
+    Xu &amp; Froment k values are in <code>kmol/(kg·h)</code>.
+    Previous version used them as <code>mol/(kg·s)</code> — off by ×3600.
+    Now multiplied by <code>1000/3600</code>.<br><br>
+    <strong>Fix 2 — Inlet H₂ initialisation</strong><br>
+    Starting with trace H₂ = 0.1 mol/s makes
+    <code>Ω ~ 10¹²</code> (K_H2O·P_H2O/P_H2 term explodes) and
+    kills all reaction rates. Now set to <code>3 mol% H₂</code>.
+  </div>
+
+  <div class="sec">How to hit both goals</div>
+  <div class="guide">
+    <strong>Cold-spot &gt; 850 °C — minimum required:</strong><br>
+    <em>T in ≥ 950 °C</em>  ·  <em>T ext ≥ 1100 °C</em>  ·  <em>Ua ≥ 2000</em><br><br>
+    <strong>Isothermal (ΔT &lt; 10 °C):</strong><br>
+    Set <em>T ext ≈ T in</em> and push <em>Ua</em> high so external
+    heating exactly compensates endothermic cooling — profile flattens.
+  </div>
+
+  <div class="sec">Reactor</div>
+  <div class="rinfo">
+    <div class="ri"><span class="rk">Type</span><span class="rv" style="color:var(--amber)">Multi-Tubular</span></div>
+    <div class="ri"><span class="rk">Tubes</span><span class="rv">400</span></div>
+    <div class="ri"><span class="rk">Tube ID</span><span class="rv">120 mm</span></div>
+    <div class="ri"><span class="rk">Tube length</span><span class="rv">12 m</span></div>
+    <div class="ri"><span class="rk">Catalyst</span><span class="rv">Ni / Al₂O₃</span></div>
+  </div>
+</aside>
+
+<main class="main">
+  <!-- GOALS -->
+  <div class="goal-row">
+    <div class="gcard" id="gc-iso">
+      <div class="gicon" id="gi-iso">—</div>
+      <div class="ginfo">
+        <div class="gtitle">Goal 1 · Isothermal  (ΔT along bed → 0)</div>
+        <div class="gval"  id="gv-iso">—</div>
+        <div class="gsub"  id="gs-iso">target: ΔT ≤ 10 °C</div>
+      </div>
+      <div class="gbadge" id="gb-iso">—</div>
+      <div class="gbar-wrap"><div class="gbar" id="gbar-iso" style="width:0"></div></div>
+    </div>
+    <div class="gcard" id="gc-cs">
+      <div class="gicon" id="gi-cs">—</div>
+      <div class="ginfo">
+        <div class="gtitle">Goal 2 · Cold-Spot &gt; 850 °C</div>
+        <div class="gval"  id="gv-cs">—</div>
+        <div class="gsub"  id="gs-cs">threshold: 850 °C</div>
+      </div>
+      <div class="gbadge" id="gb-cs">—</div>
+      <div class="gbar-wrap"><div class="gbar" id="gbar-cs" style="width:0"></div></div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi a"><div class="klbl">Cold-Spot Temp</div>
+      <div class="knum" id="k-cs">—</div><div class="kunit" id="k-cs-k">—</div></div>
+    <div class="kpi c"><div class="klbl">CH₄ Conversion</div>
+      <div class="knum" id="k-conv">—</div><div class="kunit">%</div></div>
+    <div class="kpi g"><div class="klbl">H₂ Selectivity</div>
+      <div class="knum" id="k-sel">—</div><div class="kunit">mol H₂/mol CH₄</div></div>
+    <div class="kpi b"><div class="klbl">CH₄ Feed</div>
+      <div class="knum" id="k-feed">—</div><div class="kunit">mol/s</div></div>
+    <div class="kpi r"><div class="klbl">Reactor Gain</div>
+      <div class="knum" id="k-gain">—</div><div class="kunit">ΔT_out/ΔT_in</div></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts">
+    <div class="cpanel">
+      <div class="ctitle">Temperature Profile — Catalyst Bed</div>
+      <div class="leg">
+        <span class="li"><span class="ld" style="background:#f0a500"></span>Reactor T</span>
+        <span class="li"><span class="ld" style="background:#8b949e;opacity:.6"></span>T ext</span>
+        <span class="li"><span class="ld" style="background:#3fb950"></span>850 °C goal</span>
+        <span class="li"><span class="ld" style="background:#f85149"></span>Design limit</span>
+        <span class="li" style="color:var(--cyan)">◆ Cold-spot</span>
+      </div>
+      <div class="pbox" id="plt-T"></div>
+    </div>
+    <div class="cpanel">
+      <div class="ctitle">Species Mole Fractions</div>
+      <div class="pbox" id="plt-S"></div>
+    </div>
+  </div>
+
+  <!-- DETAILS -->
+  <div class="drow-grid">
+    <div class="dc">
+      <div class="dtit">Reactor Flows</div>
+      <div class="dr"><span class="dk">CH₄ feed</span><span class="dv a" id="d-ch4">—</span></div>
+      <div class="dr"><span class="dk">H₂O feed</span><span class="dv c" id="d-h2o">—</span></div>
+      <div class="dr"><span class="dk">Inert</span>   <span class="dv"   id="d-int">—</span></div>
+      <div class="dr"><span class="dk">H₂ out</span> <span class="dv g" id="d-h2out">—</span></div>
+    </div>
+    <div class="dc">
+      <div class="dtit">Temperature Analysis</div>
+      <div class="dr"><span class="dk">T inlet</span>        <span class="dv a"  id="d-tin">—</span></div>
+      <div class="dr"><span class="dk">T outlet</span>       <span class="dv"    id="d-tout">—</span></div>
+      <div class="dr"><span class="dk">T cold-spot</span>   <span class="dv"    id="d-tcs">—</span></div>
+      <div class="dr"><span class="dk">ΔT bed (max−min)</span><span class="dv p" id="d-dt">—</span></div>
+      <div class="dr"><span class="dk">Cold-spot at W</span><span class="dv"    id="d-csw">—</span></div>
+    </div>
+    <div class="dc">
+      <div class="dtit">Stability &amp; Equilibrium</div>
+      <div class="dr"><span class="dk">Reactor gain</span>      <span class="dv"   id="d-gain">—</span></div>
+      <div class="dr"><span class="dk">Stability</span>         <span class="dv"   id="d-stab">—</span></div>
+      <div class="dr"><span class="dk">η₁ SMR  (rxn 1)</span>  <span class="dv a" id="d-e1">—</span></div>
+      <div class="dr"><span class="dk">η₂ WGS  (rxn 2)</span>  <span class="dv b" id="d-e2">—</span></div>
+      <div class="dr"><span class="dk">η₃ Total (rxn 3)</span> <span class="dv c" id="d-e3">—</span></div>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  Xu & Froment 1989  —  CORRECTED UNITS
+//  Original k: kmol / (kg_cat · h · bar^n)
+//  Converted:  mol  / (kg_cat · s · bar^n)  via × 1000/3600
+// ═══════════════════════════════════════════════════════════
+const RG   = 8.314;
+const CONV = 1000 / 3600;          // BUG 1 FIX
+
+const A_k1  = 4.225e15 * CONV;  const Ea1  = 240100;
+const A_k2  = 1.955e6  * CONV;  const Ea2  = 67130;
+const A_k3  = 1.020e15 * CONV;  const Ea3  = 243900;
+const A_Kco  = 8.23e-5;  const dH_CO  = -70650;
+const A_Kh2  = 6.12e-9;  const dH_H2  = -82900;
+const A_Kch4 = 6.65e-4;  const dH_CH4 = -38280;
+const A_Kh2o = 1.77e5;   const dH_H2O =  88680;
+const dH1 = 206100, dH2 = -41150, dH3 = 165000;
+const Cp  = { CH4:72, H2O:38, CO:33, CO2:54, H2:30, I:31 };
+
+const kk1  = T => A_k1  * Math.exp(-Ea1  / (RG*T));
+const kk2  = T => A_k2  * Math.exp(-Ea2  / (RG*T));
+const kk3  = T => A_k3  * Math.exp(-Ea3  / (RG*T));
+const Kco  = T => A_Kco  * Math.exp(-dH_CO  / (RG*T));
+const Kh2  = T => A_Kh2  * Math.exp(-dH_H2  / (RG*T));
+const Kch4 = T => A_Kch4 * Math.exp(-dH_CH4 / (RG*T));
+const Kh2o = T => A_Kh2o * Math.exp(-dH_H2O / (RG*T));
+const K1eq = T => Math.exp(-26830/T + 30.114);
+const K2eq = T => Math.exp(  4400/T -  4.036);
+const K3eq = T => K1eq(T) * K2eq(T);
+
+function deriv(y, Tm_K, Ua, P, Fi) {
+  const FCH4=Math.max(y[0],1e-10), FH2O=Math.max(y[1],1e-10);
+  const FCO =Math.max(y[2],1e-10), FCO2=Math.max(y[3],1e-10);
+  const FH2 =Math.max(y[4],1e-10), T   =Math.max(y[5], 400);
+  const Ft  = FCH4+FH2O+FCO+FCO2+FH2+Fi;
+  const pH2  = Math.max(FH2/Ft*P, 0.05);   // BUG 2 FIX: min 0.05 bar
+  const pCH4 = FCH4/Ft*P, pH2O=FH2O/Ft*P;
+  const pCO  = FCO /Ft*P, pCO2=FCO2/Ft*P;
+  const Om  = 1 + Kco(T)*pCO + Kh2(T)*pH2 + Kch4(T)*pCH4 + Kh2o(T)*pH2O/pH2;
+  const Om2 = Om*Om;
+  const cl  = v => Math.max(-5, Math.min(v, 5));
+  const r1  = cl(kk1(T)/(Math.pow(pH2,2.5)*Om2) * (pCH4*pH2O - Math.pow(pH2,3)*pCO/K1eq(T)));
+  const r2  = cl(kk2(T)/(pH2*Om2)               * (pCO *pH2O - pH2*pCO2            /K2eq(T)));
+  const r3  = cl(kk3(T)/(Math.pow(pH2,3.5)*Om2) * (pCH4*pH2O*pH2O - Math.pow(pH2,4)*pCO2/K3eq(T)));
+  const sCp = FCH4*Cp.CH4+FH2O*Cp.H2O+FCO*Cp.CO+FCO2*Cp.CO2+FH2*Cp.H2+Fi*Cp.I;
+  const dT  = Math.max(-80, Math.min((-dH1*r1-dH2*r2-dH3*r3+Ua*(Tm_K-T))/Math.max(sCp,1), 80));
+  return [-r1-r3, -r1-r2-2*r3, r1-r2, r2+r3, 3*r1+r2+4*r3, dT];
+}
+
+function rk4(y0, W, steps, Tm_K, Ua, P, Fi) {
+  let h=W/steps, y=[...y0];
+  const res={W:[],TC:[],yCH4:[],yH2O:[],yCO:[],yCO2:[],yH2:[],FCH4:[],FH2:[]};
+  const sk=Math.max(1,Math.floor(steps/220));
+  for (let i=0; i<=steps; i++) {
+    if (i%sk===0||i===steps) {
+      const Ft=y[0]+y[1]+y[2]+y[3]+y[4]+Fi;
+      res.W.push(i*h); res.TC.push(y[5]-273.15);
+      res.yCH4.push(y[0]/Ft); res.yH2O.push(y[1]/Ft);
+      res.yCO .push(y[2]/Ft); res.yCO2.push(y[3]/Ft);
+      res.yH2 .push(y[4]/Ft); res.FCH4.push(y[0]); res.FH2.push(y[4]);
+    }
+    if (i===steps) break;
+    const d1=deriv(y,Tm_K,Ua,P,Fi);
+    const y2=y.map((v,j)=>j<5?Math.max(v+.5*h*d1[j],1e-10):v+.5*h*d1[j]);
+    const d2=deriv(y2,Tm_K,Ua,P,Fi);
+    const y3=y.map((v,j)=>j<5?Math.max(v+.5*h*d2[j],1e-10):v+.5*h*d2[j]);
+    const d3=deriv(y3,Tm_K,Ua,P,Fi);
+    const y4=y.map((v,j)=>j<5?Math.max(v+h*d3[j],1e-10):v+h*d3[j]);
+    const d4=deriv(y4,Tm_K,Ua,P,Fi);
+    y=y.map((v,j)=>{const nv=v+h/6*(d1[j]+2*d2[j]+2*d3[j]+d4[j]);return j<5?Math.max(nv,1e-10):nv;});
+  }
+  return res;
+}
+
+const mkLay=(xt,yt,ylo,yhi)=>({
+  paper_bgcolor:'transparent',plot_bgcolor:'transparent',
+  margin:{t:4,r:6,l:52,b:38},
+  font:{family:'IBM Plex Mono',size:10,color:'#8b949e'},
+  xaxis:{title:{text:xt,font:{size:10}},gridcolor:'#21262d',zerolinecolor:'#30363d',color:'#8b949e'},
+  yaxis:{title:{text:yt,font:{size:10}},gridcolor:'#21262d',zerolinecolor:'#30363d',color:'#8b949e',
+         ...(ylo!==undefined?{range:[ylo,yhi]}:{})},
+  legend:{bgcolor:'transparent',font:{size:9},orientation:'h',y:-0.18},
+  autosize:true
+});
+const CFG={responsive:true,displayModeBar:false};
+let pinit=false, feedMode='fixed';
+
+function setMode(m){
+  feedMode=m;
+  document.getElementById('btn-fx').classList.toggle('on',m==='fixed');
+  document.getElementById('btn-tg').classList.toggle('on',m==='target');
+  document.getElementById('sec-fx').classList.toggle('hidden',m!=='fixed');
+  document.getElementById('sec-tg').classList.toggle('hidden',m!=='target');
+  go();
+}
+
+const $=id=>document.getElementById(id);
+const set=(id,v)=>$(id).textContent=v;
+
+function applyGoal(gcId, status, valTxt, subTxt, badgeTxt, barPct){
+  const sfx=gcId.split('-')[1];
+  ['pass','fail','warn'].forEach(c=>{
+    $(gcId).classList.remove(c);
+    $('gv-'+sfx).classList.remove(c);
+    $('gb-'+sfx).classList.remove(c);
+    $('gbar-'+sfx).classList.remove(c);
+  });
+  $(gcId).classList.add(status);
+  $('gv-'+sfx).classList.add(status);
+  $('gb-'+sfx).classList.add(status);
+  $('gbar-'+sfx).classList.add(status);
+  $('gi-'+sfx).textContent  = status==='pass'?'✓':status==='warn'?'◑':'✗';
+  $('gv-'+sfx).textContent  = valTxt;
+  $('gb-'+sfx).textContent  = badgeTxt;
+  $('gs-'+sfx).textContent  = subTxt;
+  $('gbar-'+sfx).style.width = Math.min(barPct,100)+'%';
+}
+
+function go(){
+  const Tin_C=+$('sl-tin').value, Tex_C=+$('sl-tex').value;
+  const Ua=+$('sl-ua').value,     Wc=+$('sl-wc').value;
+  const Dl=+$('sl-dl').value,     P=+$('n-p').value||30;
+  const sc=+$('n-sc').value||3,   ic=+$('n-ic').value||0;
+
+  set('lbl-tin',Tin_C+' °C'); set('lbl-tex',Tex_C+' °C');
+  set('lbl-ua',Ua+' W/(kg·K)'); set('lbl-wc',Wc+' kg'); set('lbl-dl',Dl+' °C');
+
+  const Tin_K=Tin_C+273.15, Tex_K=Tex_C+273.15, STEPS=5000;
+
+  let FCH4;
+  if (feedMode==='fixed'){
+    FCH4=+$('n-ch4').value||500;
+  } else {
+    const F0=100, Ft0r=F0*(1+sc+ic), FH2r=0.03*Ft0r/0.97;
+    const ref=rk4([F0,F0*sc,0,0,FH2r,Tin_K],Wc,STEPS,Tex_K,Ua,P,F0*ic);
+    const H2b=Math.max(ref.FH2.at(-1)-FH2r,1e-9);
+    FCH4=100*((+$('n-h2').value||1)*1000/3600/H2b);
+  }
+
+  const FH2O=FCH4*sc, Fi=FCH4*ic;
+  const Ft0=FCH4+FH2O+Fi;
+  const FH2i=0.03*Ft0/0.97;          // BUG 2 FIX: 3 mol% inlet H₂
+
+  const run=rk4([FCH4,FH2O,0,0,FH2i,Tin_K],Wc,STEPS,Tex_K,Ua,P,Fi);
+
+  const FCH4o=run.FCH4.at(-1), FH2o=run.FH2.at(-1);
+  const Tout_C=run.TC.at(-1),  Tout_K=Tout_C+273.15;
+  const Tmax=Math.max(...run.TC), Tmin=Math.min(...run.TC);
+  const cs_T=Tmin, cs_i=run.TC.indexOf(cs_T), cs_W=run.W[cs_i];
+  const dT_bed=Tmax-Tmin;
+
+  const conv=Math.max(0,Math.min((FCH4-FCH4o)/FCH4*100,100));
+  const rxd=FCH4-FCH4o, sel=rxd>1e-6?(FH2o-FH2i)/rxd:0;
+
+  // Gain
+  const rp=rk4([FCH4,FH2O,0,0,FH2i,Tin_K+1],Wc,STEPS,Tex_K,Ua,P,Fi);
+  const gain=rp.TC.at(-1)-Tout_C;
+
+  // Equilibrium approach at outlet
+  const pCH4o=run.yCH4.at(-1)*P, pH2Oo=run.yH2O.at(-1)*P;
+  const pCOo =run.yCO .at(-1)*P, pCO2o=run.yCO2.at(-1)*P;
+  const pH2o =Math.max(run.yH2.at(-1)*P,0.001);
+  const safe=(a,b)=>Math.abs(b)<1e-30?0:a/b;
+  const eta1=safe(pCH4o*pH2Oo,             Math.pow(pH2o,3)*pCOo /K1eq(Tout_K));
+  const eta2=safe(pCOo *pH2Oo,             pH2o*pCO2o             /K2eq(Tout_K));
+  const eta3=safe(pCH4o*Math.pow(pH2Oo,2), Math.pow(pH2o,4)*pCO2o/K3eq(Tout_K));
+
+  // ── GOAL 1 Isothermal ──
+  const isoPct=dT_bed/100*100;
+  if      (dT_bed<=10)  applyGoal('gc-iso','pass','ΔT = '+dT_bed.toFixed(1)+' °C','ΔT ≤ 10 °C — excellent ✓','ISOTHERMAL',100-isoPct);
+  else if (dT_bed<=40)  applyGoal('gc-iso','warn','ΔT = '+dT_bed.toFixed(1)+' °C','Increase Ua or set T ext closer to T in','NEAR-ISO',100-isoPct);
+  else                  applyGoal('gc-iso','fail','ΔT = '+dT_bed.toFixed(1)+' °C','Raise Ua and T ext to compensate endothermic cooling','NOT ISO',100-isoPct);
+
+  // ── GOAL 2 Cold-spot ──
+  const LIMIT=850;
+  const csPct=Math.max((cs_T-700)/(LIMIT+150-700)*100,0);
+  if (cs_T>=LIMIT)
+    applyGoal('gc-cs','pass',cs_T.toFixed(1)+' °C',`${(cs_T-LIMIT).toFixed(1)} °C above 850 °C ✓`,'PASS',csPct);
+  else
+    applyGoal('gc-cs','fail',cs_T.toFixed(1)+' °C',`${(LIMIT-cs_T).toFixed(1)} °C below — T in≥950, T ext≥1100, Ua≥2000`,'FAIL',csPct);
+
+  // KPIs
+  set('k-cs',   cs_T.toFixed(1)+' °C');
+  set('k-cs-k', (cs_T+273.15).toFixed(1)+' K');
+  set('k-conv', conv.toFixed(1));
+  set('k-sel',  sel.toFixed(2));
+  set('k-feed', FCH4.toFixed(1));
+  set('k-gain', gain.toFixed(3));
+
+  // Details
+  const f=v=>v.toFixed(1)+' mol/s';
+  set('d-ch4',f(FCH4)); set('d-h2o',f(FH2O)); set('d-int',f(Fi)); set('d-h2out',f(FH2o-FH2i));
+  set('d-tin', Tin_C.toFixed(0)+' °C'); set('d-tout',Tout_C.toFixed(1)+' °C');
+  set('d-tcs', cs_T.toFixed(1)+' °C'); set('d-dt',dT_bed.toFixed(1)+' °C');
+  set('d-csw', cs_W.toFixed(1)+' kg');
+  set('d-gain',gain.toFixed(3));
+  set('d-e1',eta1.toFixed(3)); set('d-e2',eta2.toFixed(3)); set('d-e3',eta3.toFixed(3));
+  $('d-stab').innerHTML=Math.abs(gain)<2
+    ?'<span class="badge ok">✓ Stable</span>'
+    :'<span class="badge no">✗ Unstable</span>';
+
+  // Plots
+  const n=run.W.length;
+  const ylo=Math.min(cs_T,Tin_C)-20, yhi=Math.max(Tex_C,Dl,Tmax)+30;
+  const fill=v=>new Array(n).fill(v);
+
+  const tT   ={x:run.W,y:run.TC,   mode:'lines',name:'Reactor T',   line:{color:'#f0a500',width:2.5}};
+  const tExt ={x:run.W,y:fill(Tex_C),mode:'lines',name:'T ext',     line:{color:'#8b949e',width:1.5,dash:'dot'}};
+  const tGoal={x:run.W,y:fill(LIMIT),mode:'lines',name:'850 °C goal',line:{color:'#3fb950',width:1.5,dash:'dash'}};
+  const tLim ={x:run.W,y:fill(Dl),  mode:'lines',name:'Design limit',line:{color:'#f85149',width:1.5,dash:'longdash'}};
+  const tCS  ={x:[cs_W],y:[cs_T],   mode:'markers',name:'Cold-spot',
+               marker:{color:'#58d1ea',size:11,symbol:'diamond',line:{color:'#0d1117',width:2}}};
+
+  const sCH4={x:run.W,y:run.yCH4,mode:'lines',name:'CH₄',line:{color:'#f0a500',width:2}};
+  const sH2O={x:run.W,y:run.yH2O,mode:'lines',name:'H₂O',line:{color:'#58d1ea',width:1.8}};
+  const sCO ={x:run.W,y:run.yCO, mode:'lines',name:'CO', line:{color:'#8b949e',width:1.3,dash:'dot'}};
+  const sCO2={x:run.W,y:run.yCO2,mode:'lines',name:'CO₂',line:{color:'#bc8cff',width:1.5}};
+  const sH2 ={x:run.W,y:run.yH2, mode:'lines',name:'H₂', line:{color:'#3fb950',width:2.5}};
+
+  if (!pinit){
+    Plotly.newPlot('plt-T',[tT,tExt,tGoal,tLim,tCS],mkLay('Catalyst Weight (kg)','Temperature (°C)',ylo,yhi),CFG);
+    Plotly.newPlot('plt-S',[sCH4,sH2O,sCO,sCO2,sH2],mkLay('Catalyst Weight (kg)','Mole Fraction'),CFG);
+    pinit=true;
+  } else {
+    Plotly.react('plt-T',[tT,tExt,tGoal,tLim,tCS],mkLay('Catalyst Weight (kg)','Temperature (°C)',ylo,yhi),CFG);
+    Plotly.react('plt-S',[sCH4,sH2O,sCO,sCO2,sH2],mkLay('Catalyst Weight (kg)','Mole Fraction'),CFG);
+  }
+}
+
+window.addEventListener('resize',()=>{Plotly.Plots.resize('plt-T');Plotly.Plots.resize('plt-S');});
+window.onload=go;
+</script>
+</body>
+</html>"""
+
+
+def main():
+    with open(HTML_FILE, "w", encoding="utf-8") as f:
+        f.write(HTML)
+
+    print("=" * 62)
+    print("  SMR Reactor Simulator — FINAL CORRECTED VERSION")
+    print("  Xu & Froment 1989 | 30 bar | Multi-Tubular")
+    print("=" * 62)
+    print()
+    print("  BUGS FIXED:")
+    print("  ✓ Fix 1 — Rate constant units: k × (1000/3600)")
+    print("    Paper uses kmol/(kg·h), code used mol/(kg·s)")
+    print()
+    print("  ✓ Fix 2 — Inlet H₂ = 3 mol% (not near-zero trace)")
+    print("    Near-zero H₂ → Ω ~ 10¹² → reaction rates ≈ 0")
+    print()
+    print("  To reach COLD-SPOT > 850 °C, set:")
+    print("    T_in  ≥ 950 °C")
+    print("    T_ext ≥ 1100 °C")
+    print("    Ua    ≥ 2000 W/(kg·K)")
+    print()
+    print(f"  Output : {HTML_FILE}")
+    print("=" * 62)
+    webbrowser.open(f"file:///{HTML_FILE.replace(os.sep, '/')}")
+
+
+if __name__ == "__main__":
+    main()
